@@ -5,6 +5,8 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.util.ArrayList;
 
+import objectville.cells.*;
+
 public class MapParser {
 
     public char[][] readAndParseByLine(String path) throws IOException {
