@@ -2,16 +2,21 @@ package objectville;
 
 import java.io.IOException;
 
+import objectville.cells.Cell;
+
 public class Main {
     public static void main(String[] args) {
         if (args.length < 1) {
             System.err.println("Use like this format: java objectville.Main <mapfile>");
             return;
         }
+        String mapPath = args[0];
         try {
-            MapParser parser = new MapParser();
-            char[][] map = parser.readAndParseByLine(args[0]);
-            System.out.println("Map loaded: " + map.length + " rows x " + map[0].length + " columns");
+            MapParser mParser = new MapParser();
+            Creator creator = new Creator();
+            char[][] map = mParser.readAndParseByLine(mapPath);
+            Cell[][] city = creator.cityCreator(map);
+            System.out.println("City grid created: " + city.length + " x " + city[0].length + " cells");
         } catch (IOException e) {
             System.err.println("Error reading map file: " + e.getMessage());
         } catch (IllegalArgumentException e) {
