@@ -1,6 +1,8 @@
 package objectville;
 
 import java.util.ArrayList;
+import java.util.LinkedList;
+import java.util.Queue;
 import java.util.function.Consumer;
 
 import objectville.cells.*;
@@ -106,10 +108,78 @@ public class City {
         }
     }
 
+    private void distributeUtilities() {
+        zones.forEach(zone -> {
+            zone.setElectricityReceived(0);
+            zone.setWaterReceived(0);
+            zone.setInternetReceived(0);
+        });
+
+        // Group providers by utility type. Each provider have their own BFS,
+        // Each "give" is printed immediately.
+        java.util.Map<String, java.util.List<UtilityProvider>> byType = new java.util.LinkedHashMap<>();
+        for (UtilityProvider up : utilities) {
+            byType.computeIfAbsent(up.getUtilityType(), k -> new ArrayList<>()).add(up);
+        }
+
+        for (java.util.Map.Entry<String, java.util.List<UtilityProvider>> entry : byType.entrySet()) {
+            String utilityType = entry.getKey();
+            java.util.List<UtilityProvider> providers = entry.getValue();
+
+            java.util.Map<Zone, Integer> received = new java.util.HashMap<>();
+
+            for (UtilityProvider utility : providers) {
+                Queue<Cell> bfsQueue = new LinkedList<>();
+                boolean[][] isVisited = new boolean[city.length][city[0].length];
+                int remainingResource = utility.getProducedAmount();
+
+                bfsQueue.add(utility);
+                isVisited[utility.getRow()][utility.getColumn()] = true;
+
+                while (remainingResource > 0 && !bfsQueue.isEmpty()) {
+                    Cell current = bfsQueue.poll();
+                    if (current instanceof Zone) {
+                        Zone zone = (Zone) current;
+
+                        int alreadyGot = received.getOrDefault(zone, 0);
+                        int demand = zone.getDemand(utilityType);
+                        int stillNeeds = Math.max(0, demand - alreadyGot);
+                        int give = Math.min(remainingResource, stillNeeds);
+
+                        if (give > 0) {
+                            if (utilityType.equals("electricity")) {
+                                zone.setElectricityReceived(zone.getElectricityReceived() + give);
+                            } else if (utilityType.equals("water")) {
+                                zone.setWaterReceived(zone.getWaterReceived() + give);
+                            } else if (utilityType.equals("internet")) {
+                                zone.setInternetReceived(zone.getInternetReceived() + give);
+                            }
+                            received.put(zone, alreadyGot + give);
+                            remainingResource -= give;
+
+                            System.out.println(zone.getShortName() + " at (" + zone.getRow() + "," + zone.getColumn()
+                                    + ") received " + give + " " + utilityType);
+                        }
+                    }
+                    Cell[] neighbors = { getLeftNeighbor(current), getRightNeighbor(current), getTopNeighbor(current),
+                            getBottomNeighbor(current) };
+                    for (Cell neighbor : neighbors) {
+                        if (neighbor != null && !isVisited[neighbor.getRow()][neighbor.getColumn()]
+                                && !(neighbor instanceof EmptyCell)) {
+                            isVisited[neighbor.getRow()][neighbor.getColumn()] = true;
+                            bfsQueue.add(neighbor);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     public void simulate(int ticks) {
         for (int tick = 1; tick <= ticks; tick++) {
             System.out.println("Tick " + tick);
             distributeServices();
+            distributeUtilities();
         }
     }
 }
