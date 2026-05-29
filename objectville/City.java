@@ -2,6 +2,7 @@ package objectville;
 
 import java.util.ArrayList;
 import java.util.LinkedList;
+import java.util.List;
 import java.util.Queue;
 import java.util.function.Consumer;
 
@@ -175,11 +176,97 @@ public class City {
         }
     }
 
+    private void distributeResources() {
+        List<Zone.HousingZone> houses = new ArrayList<>();
+        List<Zone.IndustrialZone> industries = new ArrayList<>();
+        List<Zone.CommercialZone> commercials = new ArrayList<>();
+
+        zones.forEach(z -> {
+            if (z instanceof Zone.HousingZone)
+                houses.add((Zone.HousingZone) z);
+            else if (z instanceof Zone.IndustrialZone)
+                industries.add((Zone.IndustrialZone) z);
+            else if (z instanceof Zone.CommercialZone)
+                commercials.add((Zone.CommercialZone) z);
+        });
+
+        int totalPopulation = houses.stream().mapToInt(Zone.HousingZone::getOutput).sum();
+        int totalGoods = industries.stream().mapToInt(Zone.IndustrialZone::getOutput).sum();
+        int totalLifestyle = commercials.stream().mapToInt(Zone.CommercialZone::getOutput).sum();
+
+        int industrialAndCommercialCount = industries.size() + commercials.size();
+        int commercialCount = commercials.size();
+        int houseCount = houses.size();
+
+        int distributePopulationForEach = industrialAndCommercialCount > 0
+                ? totalPopulation / industrialAndCommercialCount
+                : 0;
+        int distributeGoodsForEach = commercialCount > 0 ? totalGoods / commercialCount : 0;
+        int distributeLifestyleForEach = houseCount > 0 ? totalLifestyle / houseCount : 0;
+
+        houses.forEach(h -> h.setLifestyleReceived(distributeLifestyleForEach));
+        industries.forEach(i -> i.setPopulationReceived(distributePopulationForEach));
+        commercials.forEach(c -> {
+            c.setPopulationReceived(distributePopulationForEach);
+            c.setGoodsReceived(distributeGoodsForEach);
+        });
+
+        for (Zone z : zones) {
+            if (z instanceof Zone.CommercialZone) {
+                if (distributePopulationForEach > 0) {
+                    System.out.println(z.getShortName() + " at (" + z.getRow() + "," + z.getColumn()
+                            + ") received " + distributePopulationForEach + " population");
+                }
+                if (distributeGoodsForEach > 0) {
+                    System.out.println(z.getShortName() + " at (" + z.getRow() + "," + z.getColumn()
+                            + ") received " + distributeGoodsForEach + " goods");
+                }
+            } else if (z instanceof Zone.IndustrialZone) {
+                if (distributePopulationForEach > 0) {
+                    System.out.println(z.getShortName() + " at (" + z.getRow() + "," + z.getColumn()
+                            + ") received " + distributePopulationForEach + " population");
+                }
+            } else if (z instanceof Zone.HousingZone) {
+                if (distributeLifestyleForEach > 0) {
+                    System.out.println(z.getShortName() + " at (" + z.getRow() + "," + z.getColumn()
+                            + ") received " + distributeLifestyleForEach + " lifestyle");
+                }
+            }
+        }
+    }
+
+    private void updateZones() {
+        for (Zone zone : zones) {
+            int oldLevel = zone.getLevel();
+            zone.updateLevel();
+            int newLevel = zone.getLevel();
+
+            int newOutput = zone.computeOutput();
+            zone.setOutput(newOutput);
+
+            String resource = zone.getProducedResource();
+            System.out.println(zone.getShortName() + " at (" + zone.getRow() + "," + zone.getColumn() + ") generated "
+                    + newOutput + " " + resource);
+
+            if (newLevel > oldLevel) {
+                System.out.println(zone.getShortName() + " at (" + zone.getRow() + "," + zone.getColumn()
+                        + ") levels up from " + oldLevel + " to " + newLevel);
+            } else if (newLevel < oldLevel) {
+                System.out.println(zone.getShortName() + " at (" + zone.getRow() + "," + zone.getColumn()
+                        + ") levels down from " + oldLevel + " to " + newLevel);
+            }
+        }
+    }
+
     public void simulate(int ticks) {
         for (int tick = 1; tick <= ticks; tick++) {
             System.out.println("Tick " + tick);
             distributeServices();
             distributeUtilities();
+            if (tick > 1) {
+                distributeResources();
+            }
+            updateZones();
         }
     }
 }
