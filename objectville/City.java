@@ -166,7 +166,7 @@ public class City {
                             getBottomNeighbor(current) };
                     for (Cell neighbor : neighbors) {
                         if (neighbor != null && !isVisited[neighbor.getRow()][neighbor.getColumn()]
-                                && !(neighbor instanceof EmptyCell)) {
+                                && (neighbor instanceof Road || neighbor instanceof Zone)) {
                             isVisited[neighbor.getRow()][neighbor.getColumn()] = true;
                             bfsQueue.add(neighbor);
                         }
